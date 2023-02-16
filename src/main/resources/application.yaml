@@ -1,0 +1,61 @@
+app:
+  orderCount: 10
+server:
+  port: 8222
+spring:
+  datasource:
+    url: jdbc:h2:mem:orders_db
+    username: sa
+    password: welcome
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        format_sql: true
+info:
+  app:
+    name: orders-api
+    description: API for managing orders
+    version: 1.0.0
+            
+management:
+  endpoint:
+    health:
+      show-details: "ALWAYS"
+    circuitbreakers:
+      enabled: true 
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  info:
+    env:
+      enabled: true     
+  health:
+    circuitbreakers:
+      enabled: true
+    probes:
+      enabled: true
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      inventoryservice:
+        register-health-indicator: true
+        ring-buffer-size-in-closed-state: 5
+        ring-buffer-size-in-half-open-state: 3
+        wait-duration-in-open-state: 30s
+        failure-rate-threshold: 50
+        record-exceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - org.springframework.web.client.ResourceAccessException
+          - java.lang.IllegalStateException
+          - org.springframework.web.reactive.function.client.WebClientRequestException
+
+           
+      
+  
+    

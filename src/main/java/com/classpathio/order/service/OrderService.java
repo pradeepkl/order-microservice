@@ -16,6 +16,7 @@ import com.classpathio.order.event.OrderStatus;
 import com.classpathio.order.model.Order;
 import com.classpathio.order.repository.OrderJpaRepository;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -29,14 +30,14 @@ public class OrderService {
 	private final ApplicationEventPublisher applicationEvent;
 
 	@Transactional
+	@CircuitBreaker(name = "inventoryservice")
 	public Order saveOrder(Order order) {
 		Order savedOrder = this.orderRepository.save(order);
 		log.info("Calling the inventory microservice :: ");
 		// make the rest call and update the inventory
-		/*
-		 * long orderCount = this.webClient .post() .uri("/api/inventory")
-		 * .exchangeToMono(res -> res.bodyToMono(Long.class)) .block();
-		 */
+		
+		 long orderCount = this.webClient .post() .uri("/api/inventory").exchangeToMono(res -> res.bodyToMono(Long.class)) .block();
+		 
 		// create an order event and publish to the broker
 		OrderEvent orderEvent = new OrderEvent(savedOrder, OrderStatus.ORDER_ACCEPTED, LocalDateTime.now());
 		return savedOrder;
