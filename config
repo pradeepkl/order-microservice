@@ -7,6 +7,7 @@ clusters:
 contexts:
 - context:
     cluster: do-blr1-k8s-1-25-4-do-0-blr1-1676693556051
+    namespace: pradeep-ns
     user: do-blr1-k8s-1-25-4-do-0-blr1-1676693556051-admin
   name: do-blr1-k8s-1-25-4-do-0-blr1-1676693556051
 current-context: do-blr1-k8s-1-25-4-do-0-blr1-1676693556051
