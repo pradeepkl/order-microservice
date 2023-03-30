@@ -14,13 +14,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: https://dev-7858070.okta.com/oauth2/default
-          jwk-set-uri: https://dev-7858070.okta.com/oauth2/default/v1/keys
-        
 info:
   app:
     name: orders-api
