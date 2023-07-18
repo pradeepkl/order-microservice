@@ -1,4 +1,0 @@
-server:
-  port: 8222
-app:
-  orderCount: 10  
