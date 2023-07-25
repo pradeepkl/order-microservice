@@ -4,13 +4,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
 
-@Configuration
+@Configuration 
 public class ApplicationConfiguration {
-	@Bean
+	@Bean 
 	public WebClient webClient() {
 		return WebClient
 				.builder()
-				//svc name should be configured
+				//svc name should be configured 
 				.baseUrl("http://localhost:9222")
 				.build();
 	}
