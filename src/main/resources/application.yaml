@@ -1,0 +1,12 @@
+server:
+  port: 8081
+app:
+  orderCount: 100
+
+spring:
+  datasource:
+    username: sa 
+    password: welcome
+    url: jdbc:h2:mem:orders_db
+  jpa:
+    show-sql: true    

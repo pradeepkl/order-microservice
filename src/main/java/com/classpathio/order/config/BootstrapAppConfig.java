@@ -24,8 +24,8 @@ public class BootstrapAppConfig {
 	
 	private final OrderJpaRepository orderRepository;
 	private final Faker faker = new Faker();
-	@Value("${app.orderCount}")
-	private int orderCount;
+	
+	private int orderCount = 10;
 	
 	@EventListener(ApplicationReadyEvent.class)
 	public void onReady(ApplicationReadyEvent event) {
