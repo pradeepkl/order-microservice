@@ -2,7 +2,6 @@ server:
   port: 8081
 app:
   orderCount: 100
-
 spring:
   datasource:
     username: sa 
