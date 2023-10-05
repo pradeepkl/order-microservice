@@ -33,6 +33,6 @@ COPY --from=builder ${DEPENDENCY}/BOOT-INF/classes /app
 
 # just for development purpose
 RUN apt update && apt install -y curl
-EXPOSE 8222
+EXPOSE 8081
 
 ENTRYPOINT ["java", "-cp", "app:app/lib/*", "com.classpathio.order.OrderMicroserviceApplication"]
