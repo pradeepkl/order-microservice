@@ -7,7 +7,7 @@ FROM openjdk:11-jdk-slim as builder
 WORKDIR /app
 #copies file/directory from src location to destination location
 COPY mvnw .
-COPY .mvn .mvn
+COPY .mvn .mvn 
 COPY pom.xml .
 
 #creates a container
