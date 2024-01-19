@@ -1,7 +1,7 @@
 # Set of commands to create a docker image
 # the instructions to convert our application to a docker image
 # Base image
-# docker commands
+# docker commands 
 FROM openjdk:11-jdk-slim as builder
 
 WORKDIR /app
