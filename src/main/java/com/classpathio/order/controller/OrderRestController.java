@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import com.classpathio.order.model.Order;
 import com.classpathio.order.service.OrderService;
-import lombok.RequiredArgsConstructor; 
+import lombok.RequiredArgsConstructor;
 
 
 @RestController
