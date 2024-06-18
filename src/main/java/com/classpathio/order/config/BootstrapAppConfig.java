@@ -3,17 +3,14 @@ package com.classpathio.order.config;
 import java.time.ZoneId;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
-
 import com.classpathio.order.model.LineItem;
 import com.classpathio.order.model.Order;
 import com.classpathio.order.repository.OrderJpaRepository;
 import com.github.javafaker.Faker;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
