@@ -10,8 +10,12 @@ COPY mvnw .
 COPY .mvn .mvn 
 COPY pom.xml .
 
+# Run the dos2unix command
+RUN apt-get update && apt-get install -y dos2unix
+
 #creates a container
-RUN chmod +x ./mvnw && ./mvnw -B dependency:go-offline
+# Ensure the Maven wrapper is executable and convert line endings
+RUN dos2unix mvnw && chmod +x mvnw && ./mvnw -B dependency:go-offline
 #builds an image and disposes the container
 
 COPY src src
