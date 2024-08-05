@@ -12,7 +12,7 @@ import com.classpathio.order.model.Order;
 import com.classpathio.order.repository.OrderJpaRepository;
 import com.github.javafaker.Faker;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j; 
+import lombok.extern.slf4j.Slf4j;
 
 @Configuration
 @Slf4j
