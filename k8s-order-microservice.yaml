@@ -1,11 +1,86 @@
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: Deployment
 metadata:
+  name: order-microservice
   labels:
     app: order-microservice
-  name: order-microservice
 spec:
-  containers:
-  - image: classpathio/order-microservice
-    name: order-microservice
-  restartPolicy: Always
+  replicas: 3
+  selector:
+    matchLabels:
+      app: order-microservice
+  template:
+    metadata:
+      labels:
+        app: order-microservice
+    spec:
+      containers:
+      - name: order-microservice-container
+        image: classpathio/order-microservice
+        imagePullPolicy: Always
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "dev"
+        volumeMounts:
+        - name: order-microservice-cm
+          mountPath: /config
+        ports:
+        - containerPort: 8080
+      volumes:
+      - name: order-microservice-cm
+        configMap:
+          name: order-microservice-cm
+--- 
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: order-microservice-cm
+data:
+  application-dev.yaml: |-
+    spring:
+      datasource:
+        url: jdbc:h2:mem:testdb
+        username: sa
+        password: welcome
+        driver-class-name: org.h2.Driver
+      jpa:
+        hibernate:
+          ddl-auto: create
+        show-sql: true
+        properties:
+          hibernate:
+            dialect: org.hibernate.dialect.H2Dialect
+    server:
+      port: 8222
+  application-qa.yaml: |-
+    spring:
+      datasource:
+        url: jdbc:h2:mem:testdb
+        username: sa
+        password: welcome
+        driver-class-name: org.h2.Driver
+      jpa:
+        hibernate:
+          ddl-auto: create
+        show-sql: true
+        properties:
+          hibernate:
+            dialect: org.hibernate.dialect.H2Dialect
+    server:
+      port: 8333
+  application-prod.yaml: |-
+    spring:
+      datasource:
+        url: jdbc:h2:mem:testdb
+        username: sa
+        password: welcome
+        driver-class-name: org.h2.Driver
+      jpa:
+        hibernate:
+          ddl-auto: create
+        show-sql: true
+        properties:
+          hibernate:
+            dialect: org.hibernate.dialect.H2Dialect
+    server:
+      port: 8444
