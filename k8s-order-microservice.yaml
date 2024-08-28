@@ -42,7 +42,7 @@ data:
           hibernate:
             dialect: org.hibernate.dialect.H2Dialect
     server:
-      port: 8222
+      port: 6666
   application-qa.yaml: |-
     spring:
       datasource:
