@@ -1,35 +1,23 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Pod
 metadata:
-  name: order-microservice
+  name: "order-microservice"
   labels:
-    app: order-microservice
+    app: "order-microservice"
 spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: order-microservice
-  template:
-    metadata:
-      labels:
-        app: order-microservice
-    spec:
-      containers:
-      - name: order-microservice-container
-        image: classpathio/order-microservice
-        imagePullPolicy: Always
-        env:
-        - name: SPRING_PROFILES_ACTIVE
-          value: "dev"
-        volumeMounts:
-        - name: order-microservice-cm
-          mountPath: /config
-        ports:
-        - containerPort: 8080
-      volumes:
-      - name: order-microservice-cm
-        configMap:
-          name: order-microservice-cm
+  containers:
+    - name: "order-microservice"
+      image: "classpathio/order-microservice:latest"
+      imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - name: "app-config"
+          mountPath: "/app/config/"
+  volumes:
+    - name: "app-config"
+      configMap:
+        name: "order-microservice-cm"
+
+
 --- 
 kind: ConfigMap
 apiVersion: v1
