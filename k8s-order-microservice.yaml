@@ -1,22 +1,11 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Pod
 metadata:
-  name: order-microservice
   labels:
     app: order-microservice
+  name: order-microservice
 spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: order-microservice
-  template:
-    metadata:
-      labels:
-        app: order-microservice
-    spec:
-      containers:
-      - name: order-microservice-container
-        image: classpathio/order-microservice
-        ports:
-        - containerPort: 8080
-
+  containers:
+  - image: classpathio/order-microservice
+    name: order-microservice
+  restartPolicy: Always
