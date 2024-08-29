@@ -1,24 +1,37 @@
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: ReplicaSet
 metadata:
-  name: "order-microservice"
+  name: order-microservice-rs
   labels:
-    app: "order-microservice"
+    app: order-microservice-rs
 spec:
-  containers:
-    - name: "order-microservice"
-      image: "classpathio/order-microservice:latest"
-      imagePullPolicy: IfNotPresent
-      env:
-        - name: "SPRING_PROFILES_ACTIVE"
-          value: "dev"
-      volumeMounts:
-        - name: "app-config"
-          mountPath: "/app/config/"
-  volumes:
-    - name: "app-config"
-      configMap:
-        name: "order-microservice-cm"
+  # modify replicas according to your case
+  replicas: 3
+  selector:
+    matchLabels:
+      app: "order-microservice"
+  template:
+    metadata:
+      labels:
+        app: "order-microservice"
+        env: "dev"
+        version: "v1"
+        tier: "backend"
+    spec:        
+     containers:
+      - name: "order-microservice"
+        image: "classpathio/order-microservice:latest"
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: "SPRING_PROFILES_ACTIVE"
+            value: "dev"
+        volumeMounts:
+          - name: "app-config"
+            mountPath: "/app/config/"
+     volumes:
+      - name: "app-config"
+        configMap:
+          name: "order-microservice-cm"
 
 
 --- 
