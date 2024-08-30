@@ -28,8 +28,6 @@ spec:
         volumeMounts:
           - name: "app-config"
             mountPath: "/app/config/"
-        livelinessProbe:
-          httpGet: 
             livenessProbe:
               httpGet:
                 path: /actuator/health/liveness
