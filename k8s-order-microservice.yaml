@@ -6,7 +6,7 @@ metadata:
     app: order-microservice-rs
 spec:
   # modify replicas according to your case
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: "order-microservice"
@@ -28,6 +28,18 @@ spec:
         volumeMounts:
           - name: "app-config"
             mountPath: "/app/config/"
+        livelinessProbe:
+          httpGet: 
+            livenessProbe:
+              httpGet:
+                path: /actuator/health/liveness
+                port: 8222
+              initialDelaySeconds: 30 # 30 seconds after the container starts
+              periodSeconds: 10 # 10 seconds between probes
+              successThreshold: 1 # 1 success is needed to be considered healthy
+              failureThreshold: 5 # 5 consecutive failures
+              timeoutSeconds: 5 # 5 seconds for the probe to timeout
+
      volumes:
       - name: "app-config"
         configMap:
