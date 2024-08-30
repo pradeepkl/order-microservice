@@ -96,7 +96,7 @@ metadata:
 spec:
   selector:
     app: order-microservice
-  type: LoadBalancer
+  type: ClusterIP
   sessionAffinity: None
   sessionAffinityConfig:
     clientIP:
