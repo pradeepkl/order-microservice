@@ -22,13 +22,7 @@ spec:
       - name: "order-microservice"
         image: "classpathio/order-microservice:latest"
         imagePullPolicy: IfNotPresent
-        env:
-          - name: "SPRING_PROFILES_ACTIVE"
-            value: "dev"
-        volumeMounts:
-          - name: "app-config"
-            mountPath: "/app/config/"
-            livenessProbe:
+        livenessProbe:
               httpGet:
                 path: /actuator/health/liveness
                 port: 8222
@@ -37,6 +31,13 @@ spec:
               successThreshold: 1 # 1 success is needed to be considered healthy
               failureThreshold: 5 # 5 consecutive failures
               timeoutSeconds: 5 # 5 seconds for the probe to timeout
+        env:
+          - name: "SPRING_PROFILES_ACTIVE"
+            value: "dev"
+        volumeMounts:
+          - name: "app-config"
+            mountPath: "/app/config/"
+            
 
      volumes:
       - name: "app-config"
