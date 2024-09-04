@@ -38,7 +38,7 @@ spec:
   - name: MYAPP
     protocol: TCP
     port: 80
-    targetPort: 8222
+    targetPort: 8080
 ---
 # https://kubernetes.io/docs/concepts/services-networking/ingress/#the-ingress-resource
 
