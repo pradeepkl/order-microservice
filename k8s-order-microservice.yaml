@@ -46,7 +46,6 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: application-ingress
-  namespace: pradeep-ns
 spec:
   rules:
   - host: pradeep.classpath.io
