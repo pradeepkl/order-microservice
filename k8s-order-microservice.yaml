@@ -1,114 +1,31 @@
 apiVersion: apps/v1
-kind: ReplicaSet
+kind: Deployment
 metadata:
-  name: order-microservice-rs
+  name:  order-microservice-dep
   labels:
-    app: order-microservice-rs
+    app:  order-microservice
 spec:
-  # modify replicas according to your case
-  replicas: 1
   selector:
     matchLabels:
-      app: "order-microservice"
+      app: order-microservice
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
   template:
     metadata:
       labels:
-        app: "order-microservice"
-        env: "dev"
-        version: "v1"
-        tier: "backend"
-    spec:        
-     containers:
-      - name: "order-microservice"
-        image: "classpathio/order-microservice:latest"
-        imagePullPolicy: IfNotPresent
-        livenessProbe:
-              httpGet:
-                path: /actuator/health/liveness
-                port: 8222
-              initialDelaySeconds: 30 # 30 seconds after the container starts
-              periodSeconds: 10 # 10 seconds between probes
-              successThreshold: 1 # 1 success is needed to be considered healthy
-              failureThreshold: 5 # 5 consecutive failures
-              timeoutSeconds: 5 # 5 seconds for the probe to timeout
-        readinessProbe:
-              httpGet:
-                path: /actuator/health/readiness
-                port: 8222
-              initialDelaySeconds: 30 # 30 seconds after the container starts
-              periodSeconds: 10 # 10 seconds between probes
-              successThreshold: 1 # 1 success is needed to be considered healthy
-              failureThreshold: 5 # 5 consecutive failures
-              timeoutSeconds: 5 # 5 seconds for the probe to timeout      
-        env:
-          - name: "SPRING_PROFILES_ACTIVE"
-            value: "dev"
-        volumeMounts:
-          - name: "app-config"
-            mountPath: "/app/config/"
-            
-
-     volumes:
-      - name: "app-config"
-        configMap:
-          name: "order-microservice-cm"
-
-
---- 
-kind: ConfigMap
-apiVersion: v1
-metadata:
-  name: order-microservice-cm
-data:
-  application-dev.yaml: |-
-    spring:
-      datasource:
-        url: jdbc:h2:mem:testdb
-        username: sa
-        password: welcome
-        driver-class-name: org.h2.Driver
-      jpa:
-        hibernate:
-          ddl-auto: create
-        show-sql: true
-        properties:
-          hibernate:
-            dialect: org.hibernate.dialect.H2Dialect
-    server:
-      port: 8222
-  application-qa.yaml: |-
-    spring:
-      datasource:
-        url: jdbc:h2:mem:testdb
-        username: sa
-        password: welcome
-        driver-class-name: org.h2.Driver
-      jpa:
-        hibernate:
-          ddl-auto: create
-        show-sql: true
-        properties:
-          hibernate:
-            dialect: org.hibernate.dialect.H2Dialect
-    server:
-      port: 8333
-  application-prod.yaml: |-
-    spring:
-      datasource:
-        url: jdbc:h2:mem:testdb
-        username: sa
-        password: welcome
-        driver-class-name: org.h2.Driver
-      jpa:
-        hibernate:
-          ddl-auto: create
-        show-sql: true
-        properties:
-          hibernate:
-            dialect: org.hibernate.dialect.H2Dialect
-    server:
-      port: 6666
---- 
+        app:  order-microservice
+    spec:
+      containers:
+      - name:  order-microservice-container
+        image:  classpathio/order-microservice:1.0.0
+        ports:
+        - containerPort:  8080
+          name:  app
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -117,12 +34,28 @@ spec:
   selector:
     app: order-microservice
   type: ClusterIP
-  sessionAffinity: None
-  sessionAffinityConfig:
-    clientIP:
-      timeoutSeconds: 10800
   ports:
-  - name: http
+  - name: MYAPP
     protocol: TCP
     port: 80
     targetPort: 8222
+---
+# https://kubernetes.io/docs/concepts/services-networking/ingress/#the-ingress-resource
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: application-ingress
+  namespace: pradeep-ns
+spec:
+  rules:
+  - host: pradeep.classpath.io
+    http:
+      paths:
+      - path: /orders
+        pathType: Prefix
+        backend:
+          service:
+            name: order-microservice-svc
+            port:
+              number: 80          
