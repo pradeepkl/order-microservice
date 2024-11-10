@@ -1,19 +1,20 @@
-name: Troubleshoot AADSTS500011 Error
+name: Test ACR Push
 
 on:
   workflow_dispatch:
-    # Allows manual run from the Actions tab for troubleshooting.
 
 permissions:
   id-token: write
   contents: read
 
 jobs:
-  troubleshoot-acr-access:
+  test-acr-push:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Log in to Azure CLI using OIDC
+      - name: Checkout code
+        uses: actions/checkout@v2
+
       - name: Log in to Azure CLI
         uses: azure/login@v1
         with:
@@ -21,51 +22,24 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # Step 2: Verify Tenant ID from Azure CLI
-      - name: Verify Azure CLI Tenant ID
-        id: check-tenant-id
+      - name: Build Docker image
         run: |
-          # Get the Tenant ID from Azure CLI after login
-          CLI_TENANT_ID=$(az account show --query tenantId -o tsv)
-          echo "CLI Tenant ID: $CLI_TENANT_ID"
+          docker build -t test-image:latest .
 
-          # Retrieve the Tenant ID from GitHub secrets
-          SECRET_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}
-          echo "GitHub Secret Tenant ID: $SECRET_TENANT_ID"
-
-          # Compare the two Tenant IDs
-          if [ "$CLI_TENANT_ID" = "$SECRET_TENANT_ID" ]; then
-            echo "✅ Tenant IDs match."
-          else
-            echo "❌ Tenant IDs do not match."
-            echo "CLI Tenant ID: $CLI_TENANT_ID"
-            echo "GitHub Secret Tenant ID: $SECRET_TENANT_ID"
-            exit 1
-          fi
-
-      # Step 3: Check if the Service Principal Can Access the ACR
-      - name: List ACR Repositories
-        id: list-acr
+      - name: Tag Docker image for ACR
         env:
-          ACR_NAME: "classpathio"  # Replace with your ACR name (e.g., 'classpathio')
+          ACR_NAME: "classpathio"  # Use your ACR name
         run: |
-          echo "Testing access to Azure Container Registry (ACR) by listing repositories..."
-          az acr repository list --name $ACR_NAME --output table
-        continue-on-error: true  # Allows workflow to continue even if this fails
-        # Note: If access is denied, the job will log the failure and continue to the next step.
+          docker tag test-image:latest $ACR_NAME.azurecr.io/test-image:latest
 
-      # Step 4: Check Role Assignments for the Service Principal on ACR
-      - name: Verify AcrPush Role Assignment
+      - name: Log in to ACR using Azure CLI
         env:
-          ACR_NAME: "classpathio"  # Replace with your ACR name
+          ACR_NAME: "classpathio"  # Use your ACR name
         run: |
-          echo "Checking role assignments for the service principal on the ACR..."
-          ROLE_ASSIGNMENTS=$(az role assignment list --assignee ${{ secrets.AZURE_CLIENT_ID }} --scope /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/my-resource-group/providers/Microsoft.ContainerRegistry/registries/$ACR_NAME --query "[].roleDefinitionName" -o tsv)
-          
-          echo "Assigned Roles: $ROLE_ASSIGNMENTS"
-          if echo "$ROLE_ASSIGNMENTS" | grep -q "AcrPush"; then
-            echo "✅ The service principal has AcrPush role on ACR."
-          else
-            echo "❌ The service principal does NOT have AcrPush role on ACR."
-            exit 1
-          fi
+          az acr login --name $ACR_NAME
+
+      - name: Push Docker image to ACR
+        env:
+          ACR_NAME: "classpathio"  # Use your ACR name
+        run: |
+          docker push $ACR_NAME.azurecr.io/test-image:latest
