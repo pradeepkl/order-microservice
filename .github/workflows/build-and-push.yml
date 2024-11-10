@@ -60,7 +60,7 @@ jobs:
           ACR_NAME: "classpathio"  # Replace with your ACR name
         run: |
           echo "Checking role assignments for the service principal on the ACR..."
-          ROLE_ASSIGNMENTS=$(az role assignment list --assignee ${{ secrets.AZURE_CLIENT_ID }} --scope /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/<your-resource-group>/providers/Microsoft.ContainerRegistry/registries/$ACR_NAME --query "[].roleDefinitionName" -o tsv)
+          ROLE_ASSIGNMENTS=$(az role assignment list --assignee ${{ secrets.AZURE_CLIENT_ID }} --scope /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/my-resource-group/providers/Microsoft.ContainerRegistry/registries/$ACR_NAME --query "[].roleDefinitionName" -o tsv)
           
           echo "Assigned Roles: $ROLE_ASSIGNMENTS"
           if echo "$ROLE_ASSIGNMENTS" | grep -q "AcrPush"; then
