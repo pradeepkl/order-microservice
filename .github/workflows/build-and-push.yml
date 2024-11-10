@@ -24,6 +24,8 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Verify Azure CLI Tenant ID
+        run: az account show --query tenantId -o tsv
       # Get an ACR access token and use it for Docker login
       - name: Get ACR Access Token and Login
         env:
