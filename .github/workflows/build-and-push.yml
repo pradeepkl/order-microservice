@@ -67,13 +67,13 @@ jobs:
       # Tag Docker image with ACR URL
       - name: Tag Docker image with ACR URL
         env:
-          ACR_LOGIN_SERVER: "<your-acr-name>.azurecr.io"  # Replace with your ACR name
+          ACR_LOGIN_SERVER: "classpathio.azurecr.io"  # Replace with your ACR name
         run: |
           docker tag my-spring-app:latest ${ACR_LOGIN_SERVER}/my-spring-app:latest
 
       # Push Docker image to ACR
       - name: Push Docker image to ACR
         env:
-          ACR_LOGIN_SERVER: "<your-acr-name>.azurecr.io"  # Replace with your ACR name
+          ACR_LOGIN_SERVER: "classpathio.azurecr.io"  # Replace with your ACR name
         run: |
           docker push ${ACR_LOGIN_SERVER}/my-spring-app:latest
