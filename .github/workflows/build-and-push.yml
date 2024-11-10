@@ -1,22 +1,19 @@
-name: Build and Push Docker Image to ACR
+name: Troubleshoot AADSTS500011 Error
 
 on:
-  push:
-    branches:
-      - master
+  workflow_dispatch:
+    # Allows manual run from the Actions tab for troubleshooting.
 
 permissions:
   id-token: write
   contents: read
 
 jobs:
-  build-and-push:
+  troubleshoot-acr-access:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
+      # Step 1: Log in to Azure CLI using OIDC
       - name: Log in to Azure CLI
         uses: azure/login@v1
         with:
@@ -24,65 +21,51 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      # Step 2: Verify Tenant ID from Azure CLI
       - name: Verify Azure CLI Tenant ID
         id: check-tenant-id
         run: |
           # Get the Tenant ID from Azure CLI after login
           CLI_TENANT_ID=$(az account show --query tenantId -o tsv)
+          echo "CLI Tenant ID: $CLI_TENANT_ID"
 
           # Retrieve the Tenant ID from GitHub secrets
           SECRET_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}
+          echo "GitHub Secret Tenant ID: $SECRET_TENANT_ID"
 
           # Compare the two Tenant IDs
           if [ "$CLI_TENANT_ID" = "$SECRET_TENANT_ID" ]; then
             echo "✅ Tenant IDs match."
           else
             echo "❌ Tenant IDs do not match."
-            echo "Azure CLI Tenant ID: $CLI_TENANT_ID"
+            echo "CLI Tenant ID: $CLI_TENANT_ID"
             echo "GitHub Secret Tenant ID: $SECRET_TENANT_ID"
-            exit 1  # Exit with an error code if the Tenant IDs do not match
+            exit 1
           fi
 
-      # Optional Step: Print the result of the comparison
-      - name: Print Comparison Result
-        if: ${{ steps.check-tenant-id.outcome == 'success' }}
-        run: echo "The Tenant IDs are equal."
-
-      - name: Docker Login with ACR Admin Credentials
+      # Step 3: Check if the Service Principal Can Access the ACR
+      - name: List ACR Repositories
+        id: list-acr
         env:
-          ACR_LOGIN_SERVER: "classpathio.azurecr.io"
-          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
-          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+          ACR_NAME: "classpathio"  # Replace with your ACR name (e.g., 'classpathio')
         run: |
-          echo $ACR_PASSWORD | docker login $ACR_LOGIN_SERVER -u $ACR_USERNAME --password-stdin
-         
-        
-      # Get an ACR access token and use it for Docker login
-      - name: Get ACR Access Token and Login
-        env:
-          ACR_LOGIN_SERVER: "classpathio.azurecr.io"  # Replace with your ACR name, e.g., classpathio.azurecr.io
-        run: |
-          # Get an OAuth token for ACR
-          ACCESS_TOKEN=$(az account get-access-token --resource "https://${ACR_LOGIN_SERVER}" --query accessToken -o tsv)
-          echo $ACCESS_TOKEN
-          # Log in to Docker with the access token
-          echo $ACCESS_TOKEN | docker login $ACR_LOGIN_SERVER -u 00000000-0000-0000-0000-000000000000 --password-stdin
+          echo "Testing access to Azure Container Registry (ACR) by listing repositories..."
+          az acr repository list --name $ACR_NAME --output table
+        continue-on-error: true  # Allows workflow to continue even if this fails
+        # Note: If access is denied, the job will log the failure and continue to the next step.
 
-      # Build Docker image
-      - name: Build Docker image
-        run: |
-          docker build -t my-spring-app:latest .
-
-      # Tag Docker image with ACR URL
-      - name: Tag Docker image with ACR URL
+      # Step 4: Check Role Assignments for the Service Principal on ACR
+      - name: Verify AcrPush Role Assignment
         env:
-          ACR_LOGIN_SERVER: "classpathio.azurecr.io"  # Replace with your ACR name
+          ACR_NAME: "classpathio"  # Replace with your ACR name
         run: |
-          docker tag my-spring-app:latest ${ACR_LOGIN_SERVER}/my-spring-app:latest
-
-      # Push Docker image to ACR
-      - name: Push Docker image to ACR
-        env:
-          ACR_LOGIN_SERVER: "classpathio.azurecr.io"  # Replace with your ACR name
-        run: |
-          docker push ${ACR_LOGIN_SERVER}/my-spring-app:latest
+          echo "Checking role assignments for the service principal on the ACR..."
+          ROLE_ASSIGNMENTS=$(az role assignment list --assignee ${{ secrets.AZURE_CLIENT_ID }} --scope /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/<your-resource-group>/providers/Microsoft.ContainerRegistry/registries/$ACR_NAME --query "[].roleDefinitionName" -o tsv)
+          
+          echo "Assigned Roles: $ROLE_ASSIGNMENTS"
+          if echo "$ROLE_ASSIGNMENTS" | grep -q "AcrPush"; then
+            echo "✅ The service principal has AcrPush role on ACR."
+          else
+            echo "❌ The service principal does NOT have AcrPush role on ACR."
+            exit 1
+          fi
