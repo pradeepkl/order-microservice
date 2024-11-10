@@ -47,6 +47,15 @@ jobs:
       - name: Print Comparison Result
         if: ${{ steps.check-tenant-id.outcome == 'success' }}
         run: echo "The Tenant IDs are equal."
+
+      - name: Docker Login with ACR Admin Credentials
+        env:
+          ACR_LOGIN_SERVER: "classpathio.azurecr.io"
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+        run: |
+          echo $ACR_PASSWORD | docker login $ACR_LOGIN_SERVER -u $ACR_USERNAME --password-stdin
+         
         
       # Get an ACR access token and use it for Docker login
       - name: Get ACR Access Token and Login
