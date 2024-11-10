@@ -33,7 +33,7 @@ jobs:
         run: |
           # Get an OAuth token for ACR
           ACCESS_TOKEN=$(az account get-access-token --resource "https://${ACR_LOGIN_SERVER}" --query accessToken -o tsv)
-          
+          echo $ACCESS_TOKEN
           # Log in to Docker with the access token
           echo $ACCESS_TOKEN | docker login $ACR_LOGIN_SERVER -u 00000000-0000-0000-0000-000000000000 --password-stdin
 
