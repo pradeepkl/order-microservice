@@ -12,51 +12,44 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+
     steps:
-      # Step 1: Checkout code
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Debug - Print environment variables
-        env:
-         CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-         TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-         SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        run: |
-          echo "Client ID: ${CLIENT_ID}"
-          echo "Tenant ID: ${TENANT_ID}"
-          echo "Subscription ID: ${SUBSCRIPTION_ID}"
-      - name: Get ACR Access Token
-        id: get-acr-access-token
-        run: |
-            echo $(az acr login --name classpathio.azurecr.io --expose-token --output tsv --query accessToken) > token.txt
-      
-      - name: Docker Login with Access Token
-        run: |
-          cat token.txt
-          
-      - name: Log in to ACR
-        run: az acr login --name classpathio.azurecr.io    
-      - name: List ACR Repositories (Test)
-        run: az acr repository list --name classpathio.azurecr.io --output table  
-      # Step 2: Log in to Azure CLI with OpenID Connect (OIDC)
+
       - name: Log in to Azure CLI
         uses: azure/login@v1
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          enable-AzPSSession: true
-      # Step 3: Build Docker Image
+
+      # Get an ACR access token and use it for Docker login
+      - name: Get ACR Access Token and Login
+        env:
+          ACR_LOGIN_SERVER: "classpathio.azurecr.io"  # Replace with your ACR name, e.g., classpathio.azurecr.io
+        run: |
+          # Get an OAuth token for ACR
+          ACCESS_TOKEN=$(az account get-access-token --resource "https://${ACR_LOGIN_SERVER}" --query accessToken -o tsv)
+          
+          # Log in to Docker with the access token
+          echo $ACCESS_TOKEN | docker login $ACR_LOGIN_SERVER -u 00000000-0000-0000-0000-000000000000 --password-stdin
+
+      # Build Docker image
       - name: Build Docker image
         run: |
-          docker build -t order-microservice:latest .
+          docker build -t my-spring-app:latest .
 
-      # Step 4: Tag Docker Image with ACR URL
-      - name: Tag Docker image
+      # Tag Docker image with ACR URL
+      - name: Tag Docker image with ACR URL
+        env:
+          ACR_LOGIN_SERVER: "<your-acr-name>.azurecr.io"  # Replace with your ACR name
         run: |
-          docker tag order-microservice:latest classpathio.azurecr.io/order-microservice:latest
+          docker tag my-spring-app:latest ${ACR_LOGIN_SERVER}/my-spring-app:latest
 
-      # Step 5: Push Docker Image to ACR
+      # Push Docker image to ACR
       - name: Push Docker image to ACR
+        env:
+          ACR_LOGIN_SERVER: "<your-acr-name>.azurecr.io"  # Replace with your ACR name
         run: |
-          docker push classpathio.azurecr.io/order-microservice:latest
+          docker push ${ACR_LOGIN_SERVER}/my-spring-app:latest
