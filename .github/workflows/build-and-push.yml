@@ -26,6 +26,30 @@ jobs:
 
       - name: Verify Azure CLI Tenant ID
         run: az account show --query tenantId -o tsv
+      - name: Verify Azure CLI Tenant ID
+        id: check-tenant-id
+        run: |
+          # Get the Tenant ID from Azure CLI after login
+          CLI_TENANT_ID=$(az account show --query tenantId -o tsv)
+
+          # Retrieve the Tenant ID from GitHub secrets
+          SECRET_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}
+
+          # Compare the two Tenant IDs
+          if [ "$CLI_TENANT_ID" = "$SECRET_TENANT_ID" ]; then
+            echo "✅ Tenant IDs match."
+          else
+            echo "❌ Tenant IDs do not match."
+            echo "Azure CLI Tenant ID: $CLI_TENANT_ID"
+            echo "GitHub Secret Tenant ID: $SECRET_TENANT_ID"
+            exit 1  # Exit with an error code if the Tenant IDs do not match
+          fi
+
+      # Optional Step: Print the result of the comparison
+      - name: Print Comparison Result
+        if: ${{ steps.check-tenant-id.outcome == 'success' }}
+        run: echo "The Tenant IDs are equal."
+        
       # Get an ACR access token and use it for Docker login
       - name: Get ACR Access Token and Login
         env:
