@@ -1,0 +1,29 @@
+name: Test OIDC Setup
+
+on:
+  push:
+    branches: [ "test-oidc" ]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  test-auth:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Google Auth
+      id: auth
+      uses: google-github-actions/auth@v2
+      with:
+        workload_identity_provider: 'projects/381882042224/locations/global/workloadIdentityPools/github-pool-test/providers/github-provider-test'
+        service_account: 'github-actions-test@trainer-gketraining21.iam.gserviceaccount.com'
+        token_format: 'access_token'
+
+    - name: Test Authentication
+      run: |
+        echo "Authentication successful!"
+        gcloud auth list
