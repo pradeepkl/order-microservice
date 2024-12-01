@@ -1,133 +1,136 @@
 # Spring Boot Docker Image Deployment to GCP Artifact Registry
 
-This repository contains configuration for automating the build and deployment of a Spring Boot application Docker image to Google Cloud Platform's Artifact Registry using GitHub Actions. The setup can be done using either CLI commands or Terraform.
+This repository contains the setup for deploying a Spring Boot application Docker image to Google Cloud Platform's Artifact Registry using GitHub Actions and Workload Identity Federation.
 
 ## Prerequisites
 
-- Google Cloud Platform account
+- Google Cloud Platform account with billing enabled
 - GitHub repository with Spring Boot application
+- gcloud CLI installed and initialized
 - Docker installed locally (for testing)
-- GCP Project with billing enabled
-- gcloud CLI installed (for Option 1)
-- Terraform installed (for Option 2)
+- Required GCP APIs enabled:
+  ```bash
+  # Windows single line
+  gcloud services enable iamcredentials.googleapis.com && gcloud services enable iam.googleapis.com && gcloud services enable artifactregistry.googleapis.com
+  ```
+  ```bash
+  # Expanded version
+  gcloud services enable iamcredentials.googleapis.com
+  gcloud services enable iam.googleapis.com
+  gcloud services enable artifactregistry.googleapis.com
+  ```
 
-## Option 1: Setup using GCP CLI Commands
+## Initial Setup
 
-### 1. Create Workload Identity Pool
+### 1. Set Project
 ```bash
-# Creates a new identity pool for GitHub Actions authentication
-gcloud iam workload-identity-pools create "github-pool" \
-  --project="${PROJECT_ID}" \
+# Verify current project
+gcloud config get-value project
+
+# Set project if needed
+gcloud config set project YOUR_PROJECT_ID
+```
+
+### 2. Create Workload Identity Pool
+```bash
+# Windows single line
+gcloud iam workload-identity-pools create github-pool-new --project=YOUR_PROJECT_ID --location=global --display-name="GitHub Actions Pool"
+```
+```bash
+# Expanded version
+gcloud iam workload-identity-pools create "github-pool-new" \
+  --project="YOUR_PROJECT_ID" \
   --location="global" \
   --display-name="GitHub Actions Pool"
 ```
 
-### 2. Create Workload Identity Provider
+### 3. Verify Pool Creation
 ```bash
-# Sets up OIDC provider for secure authentication between GitHub and GCP
+# Windows single line
+gcloud iam workload-identity-pools describe github-pool-new --project=YOUR_PROJECT_ID --location=global
+```
+```bash
+# Expanded version
+gcloud iam workload-identity-pools describe "github-pool-new" \
+  --project="YOUR_PROJECT_ID" \
+  --location="global"
+```
+
+### 4. Create Workload Identity Provider
+```bash
+# Windows single line
+gcloud iam workload-identity-pools providers create-oidc github-provider --project=YOUR_PROJECT_ID --location=global --workload-identity-pool=github-pool-new --display-name="GitHub provider" --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" --issuer-uri="https://token.actions.githubusercontent.com" --attribute-condition="assertion.repository=='YOUR_GITHUB_USERNAME/YOUR_REPO_NAME'"
+```
+```bash
+# Expanded version
 gcloud iam workload-identity-pools providers create-oidc "github-provider" \
-  --project="${PROJECT_ID}" \
+  --project="YOUR_PROJECT_ID" \
   --location="global" \
-  --workload-identity-pool="github-pool" \
+  --workload-identity-pool="github-pool-new" \
   --display-name="GitHub provider" \
   --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
-  --attribute-condition="assertion.repository=='YOUR_GITHUB_ORG/YOUR_REPO_NAME'"
+  --attribute-condition="assertion.repository=='YOUR_GITHUB_USERNAME/YOUR_REPO_NAME'"
 ```
 
-### 3. Create Service Account
+### 5. Create Service Account
 ```bash
-# Creates a dedicated service account for GitHub Actions
+# Windows single line
+gcloud iam service-accounts create github-actions --project=YOUR_PROJECT_ID --display-name="GitHub Actions Service Account"
+```
+```bash
+# Expanded version
 gcloud iam service-accounts create github-actions \
-  --project="${PROJECT_ID}"
+  --project="YOUR_PROJECT_ID" \
+  --display-name="GitHub Actions Service Account"
 ```
 
-### 4. Configure IAM Permissions
-# Grants artifact registry write permissions to the service account
-gcloud artifacts repositories add-iam-policy-binding ${REPOSITORY} \
-  --project="${PROJECT_ID}" \
+### 6. Create Artifact Registry Repository
+```bash
+# Windows single line
+gcloud artifacts repositories create YOUR_REPOSITORY --project=YOUR_PROJECT_ID --repository-format=docker --location=asia-south1 --description="Docker repository for Spring Boot applications"
+```
+```bash
+# Expanded version
+gcloud artifacts repositories create YOUR_REPOSITORY \
+  --project="YOUR_PROJECT_ID" \
+  --repository-format=docker \
   --location=asia-south1 \
-  --member="serviceAccount:github-actions@${PROJECT_ID}.iam.gserviceaccount.com" \
-  --role="roles/artifactregistry.writer"
-
-# Allows GitHub Actions to impersonate the service account
-gcloud iam service-accounts add-iam-policy-binding "github-actions@${PROJECT_ID}.iam.gserviceaccount.com" \
-  --project="${PROJECT_ID}" \
-  --role="roles/iam.workloadIdentityUser" \
-  --member="principalSet://iam.googleapis.com/projects/${PROJECT_ID}/locations/global/workloadIdentityPools/github-pool/attribute.repository/${GITHUB_REPOSITORY}"
-  --role="roles/artifactregistry.writer"
-
-# Allows GitHub Actions to impersonate the service account
-gcloud iam service-accounts add-iam-policy-binding "github-actions@${PROJECT_ID}.iam.gserviceaccount.com" \
-  --project="${PROJECT_ID}" \
-  --role="roles/iam.workloadIdentityUser" \
-  --member="principalSet://iam.googleapis.com/projects/${PROJECT_ID}/locations/global/workloadIdentityPools/github-pool/attribute.repository/${GITHUB_REPOSITORY}"
-
-# Allows GitHub Actions to impersonate the service account
-gcloud iam service-accounts add-iam-policy-binding "github-actions@${PROJECT_ID}.iam.gserviceaccount.com" \
-  --project="${PROJECT_ID}" \
-  --role="roles/iam.workloadIdentityUser" \
-  --member="principalSet://iam.googleapis.com/projects/${PROJECT_ID}/locations/global/workloadIdentityPools/github-pool/attribute.repository/${GITHUB_REPOSITORY}"
+  --description="Docker repository for Spring Boot applications"
 ```
 
-## Option 2: Setup using Terraform
-
-### 1. Create Terraform Configuration Files
-Create the following files in your repository:
-
-`main.tf`:
-```hcl
-# Contains the main Terraform configuration for GCP resources
-# See terraform script from previous message
-```
-
-`terraform.tfvars`:
-```hcl
-# Configure your specific values
-project_id  = "your-project-id"
-github_repo = "your-github-org/your-repo-name"
-```
-
-### 2. Initialize and Apply Terraform Configuration
+### 7. Configure IAM Permissions
 ```bash
-# Initialize Terraform working directory
-terraform init
-
-# Preview the changes
-terraform plan
-
-# Apply the configuration
-terraform apply
+# Windows single line
+gcloud artifacts repositories add-iam-policy-binding YOUR_REPOSITORY --project=YOUR_PROJECT_ID --location=asia-south1 --member="serviceAccount:github-actions@YOUR_PROJECT_ID.iam.gserviceaccount.com" --role="roles/artifactregistry.writer"
 ```
-
-### 3. Save Terraform Outputs
 ```bash
-# Note down the outputs for:
-# - workload_identity_provider
-# - service_account_email
-# - artifact_registry_repository
+# Get your project number (needed for next step)
+gcloud projects describe YOUR_PROJECT_ID --format="value(projectNumber)"
+```
+```bash
+# Windows single line - Use project number from previous step
+gcloud iam service-accounts add-iam-policy-binding github-actions@YOUR_PROJECT_ID.iam.gserviceaccount.com --project=YOUR_PROJECT_ID --role="roles/iam.workloadIdentityUser" --member="principalSet://iam.googleapis.com/projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool-new/attribute.repository/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME"
 ```
 
 ## GitHub Actions Workflow Setup
 
-### 1. Create GitHub Actions Workflow File
-Create `.github/workflows/build-push.yml`:
+Create `.github/workflows/build-push.yml` with the following content:
 
 ```yaml
-# Workflow configuration that builds and pushes Docker image to GCP
 name: Build and Push to GCP
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 env:
-  PROJECT_ID: your-project-id
+  PROJECT_ID: YOUR_PROJECT_ID
   GAR_LOCATION: asia-south1
-  REPOSITORY: your-repository
-  IMAGE_NAME: spring-boot-app
+  REPOSITORY: YOUR_REPOSITORY
+  IMAGE_NAME: YOUR_IMAGE_NAME
   
 permissions:
   contents: read
@@ -145,16 +148,16 @@ jobs:
       id: auth
       uses: google-github-actions/auth@v2
       with:
-        workload_identity_provider: projects/${{ env.PROJECT_ID }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider
-        service_account: github-actions@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
+        workload_identity_provider: 'projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool-new/providers/github-provider'
+        service_account: 'github-actions@YOUR_PROJECT_ID.iam.gserviceaccount.com'
+        token_format: 'access_token'
 
     - name: Docker Auth
-      id: docker-auth
-      uses: docker/login-action@v3
+      uses: 'docker/login-action@v3'
       with:
-        registry: ${{ env.GAR_LOCATION }}-docker.pkg.dev
-        username: oauth2accesstoken
-        password: ${{ steps.auth.outputs.access_token }}
+        registry: '${{ env.GAR_LOCATION }}-docker.pkg.dev'
+        username: 'oauth2accesstoken'
+        password: '${{ steps.auth.outputs.access_token }}'
 
     - name: Build and Push Container
       uses: docker/build-push-action@v5
@@ -166,52 +169,140 @@ jobs:
           ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest
 ```
 
-### 2. Update Environment Variables
-Update the following variables in the workflow file:
-- `PROJECT_ID`: Your GCP project ID
-- `REPOSITORY`: Your Artifact Registry repository name
-- `IMAGE_NAME`: Desired name for your Docker image
+## Important Notes
+
+1. Replace placeholders:
+   - `YOUR_PROJECT_ID`: Your GCP project ID
+   - `YOUR_PROJECT_NUMBER`: Your GCP project number
+   - `YOUR_REPOSITORY`: Your Artifact Registry repository name
+   - `YOUR_GITHUB_USERNAME`: Your GitHub username
+   - `YOUR_REPO_NAME`: Your GitHub repository name
+   - `YOUR_IMAGE_NAME`: Desired name for your Docker image
+
+2. Critical Points:
+   - Use project number (not project ID) in workload identity provider path
+   - Ensure all GCP APIs are enabled before starting
+   - Verify resource creation after each step
+   - Maintain exact case sensitivity in repository names
 
 ## Verification
 
-1. Push changes to your GitHub repository
-2. Check GitHub Actions tab to monitor the workflow
-3. Verify image in GCP Artifact Registry:
+1. Check Workload Identity Pool:
 ```bash
-# List images in your repository
-gcloud artifacts docker images list \
-    asia-south1-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}
+gcloud iam workload-identity-pools describe github-pool-new --project=YOUR_PROJECT_ID --location=global
 ```
 
-## Important Notes
+2. Verify Service Account:
+```bash
+gcloud iam service-accounts describe github-actions@YOUR_PROJECT_ID.iam.gserviceaccount.com
+```
 
-- All resources are created in the Mumbai region (asia-south1)
-- The workflow uses OpenID Connect (OIDC) for secure authentication
-- Images are tagged with both git SHA and 'latest' tags
-- Service account has minimal required permissions for security
-- Workload Identity Federation eliminates the need for static credentials
+3. Check Artifact Registry Repository:
+```bash
+gcloud artifacts repositories list --project=YOUR_PROJECT_ID --location=asia-south1
+```
+
+## Teardown Process
+
+Follow these steps to clean up all created resources. Execute them in order to properly remove all dependencies.
+
+### 1. Delete Artifact Registry Repository
+```bash
+# Windows single line
+gcloud artifacts repositories delete YOUR_REPOSITORY --project=YOUR_PROJECT_ID --location=asia-south1 --quiet
+```
+```bash
+# Expanded version
+gcloud artifacts repositories delete YOUR_REPOSITORY \
+  --project=YOUR_PROJECT_ID \
+  --location=asia-south1 \
+  --quiet
+```
+
+### 2. Remove Service Account IAM Bindings
+```bash
+# Windows single line
+gcloud iam service-accounts remove-iam-policy-binding github-actions@YOUR_PROJECT_ID.iam.gserviceaccount.com --project=YOUR_PROJECT_ID --role="roles/iam.workloadIdentityUser" --member="principalSet://iam.googleapis.com/projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool-new/attribute.repository/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME"
+```
+
+### 3. Delete Service Account
+```bash
+# Windows single line
+gcloud iam service-accounts delete github-actions@YOUR_PROJECT_ID.iam.gserviceaccount.com --project=YOUR_PROJECT_ID --quiet
+```
+```bash
+# Expanded version
+gcloud iam service-accounts delete github-actions@YOUR_PROJECT_ID.iam.gserviceaccount.com \
+  --project=YOUR_PROJECT_ID \
+  --quiet
+```
+
+### 4. Delete Workload Identity Pool Provider
+```bash
+# Windows single line
+gcloud iam workload-identity-pools providers delete github-provider --project=YOUR_PROJECT_ID --location=global --workload-identity-pool=github-pool-new --quiet
+```
+```bash
+# Expanded version
+gcloud iam workload-identity-pools providers delete github-provider \
+  --project=YOUR_PROJECT_ID \
+  --location=global \
+  --workload-identity-pool=github-pool-new \
+  --quiet
+```
+
+### 5. Delete Workload Identity Pool
+```bash
+# Windows single line
+gcloud iam workload-identity-pools delete github-pool-new --project=YOUR_PROJECT_ID --location=global --quiet
+```
+```bash
+# Expanded version
+gcloud iam workload-identity-pools delete github-pool-new \
+  --project=YOUR_PROJECT_ID \
+  --location=global \
+  --quiet
+```
+
+### 6. Verify Resource Deletion
+```bash
+# Check if Artifact Registry repository is deleted
+gcloud artifacts repositories list --project=YOUR_PROJECT_ID --location=asia-south1
+
+# Check if Service Account is deleted
+gcloud iam service-accounts list --project=YOUR_PROJECT_ID
+
+# Check if Workload Identity Pool is deleted
+gcloud iam workload-identity-pools list --project=YOUR_PROJECT_ID --location=global
+```
 
 ## Troubleshooting
 
-1. **Authentication Issues**:
-   - Verify Workload Identity Pool configuration
+1. **Pool Already Exists Error**:
+   - Use `gcloud iam workload-identity-pools list` to check existing pools
+   - Create pool with a different name if needed
+
+2. **Invalid Argument for Identity Pool**:
+   - Verify project number is used (not project ID)
+   - Check repository name case sensitivity
+   - Ensure all slashes and quotes are correct
+
+3. **Docker Authentication Error**:
+   - Verify `token_format: 'access_token'` is set in workflow
    - Check service account permissions
-   - Ensure GitHub repository name matches the configuration
+   - Ensure Artifact Registry API is enabled
 
-2. **Build Failures**:
-   - Check Dockerfile syntax
-   - Verify Spring Boot application builds locally
-   - Review GitHub Actions logs for detailed errors
+4. **Permission Denied**:
+   - Verify APIs are enabled
+   - Check service account roles
+   - Ensure correct project is set
 
-3. **Push Failures**:
-   - Confirm Artifact Registry repository exists
-   - Verify service account has proper IAM roles
-   - Check network connectivity in GitHub Actions logs
+5. **Resource Busy During Deletion**:
+   - Wait a few minutes and try again
+   - Check for dependencies in the GCP Console
+   - Ensure no active workloads are using the resources
 
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a new Pull Request
+6. **Dependencies Still Exist During Deletion**:
+   - Follow the deletion order as specified
+   - Check for any custom IAM bindings
+   - Look for any custom configurations in GCP Console
