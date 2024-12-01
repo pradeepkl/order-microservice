@@ -30,8 +30,9 @@ gcloud iam workload-identity-pools providers create-oidc "github-provider" \
   --location="global" \
   --workload-identity-pool="github-pool" \
   --display-name="GitHub provider" \
-  --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository" \
-  --issuer-uri="https://token.actions.githubusercontent.com"
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
+  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --attribute-condition="assertion.repository=='YOUR_GITHUB_ORG/YOUR_REPO_NAME'"
 ```
 
 ### 3. Create Service Account
@@ -42,13 +43,25 @@ gcloud iam service-accounts create github-actions \
 ```
 
 ### 4. Configure IAM Permissions
-```bash
 # Grants artifact registry write permissions to the service account
 gcloud artifacts repositories add-iam-policy-binding ${REPOSITORY} \
   --project="${PROJECT_ID}" \
   --location=asia-south1 \
   --member="serviceAccount:github-actions@${PROJECT_ID}.iam.gserviceaccount.com" \
   --role="roles/artifactregistry.writer"
+
+# Allows GitHub Actions to impersonate the service account
+gcloud iam service-accounts add-iam-policy-binding "github-actions@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --project="${PROJECT_ID}" \
+  --role="roles/iam.workloadIdentityUser" \
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_ID}/locations/global/workloadIdentityPools/github-pool/attribute.repository/${GITHUB_REPOSITORY}"
+  --role="roles/artifactregistry.writer"
+
+# Allows GitHub Actions to impersonate the service account
+gcloud iam service-accounts add-iam-policy-binding "github-actions@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --project="${PROJECT_ID}" \
+  --role="roles/iam.workloadIdentityUser" \
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_ID}/locations/global/workloadIdentityPools/github-pool/attribute.repository/${GITHUB_REPOSITORY}"
 
 # Allows GitHub Actions to impersonate the service account
 gcloud iam service-accounts add-iam-policy-binding "github-actions@${PROJECT_ID}.iam.gserviceaccount.com" \
