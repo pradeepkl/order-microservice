@@ -1,42 +1,57 @@
-# Set of commands to create a docker image
-# the instructions to convert our application to a docker image
-# Base image
-# docker commands 
-FROM openjdk:11-jdk-slim as builder
-
+# Build stage
+FROM eclipse-temurin:11-jdk-jammy as builder
 WORKDIR /app
-#copies file/directory from src location to destination location
-COPY mvnw .
-COPY .mvn .mvn 
-COPY pom.xml .
 
-# Run the dos2unix command
-RUN apt-get update && apt-get install -y dos2unix
+# Add non-root user
+RUN addgroup --system --gid 1001 appgroup && \
+    adduser --system --uid 1001 --group appgroup
 
-#creates a container
-# Ensure the Maven wrapper is executable and convert line endings
-RUN dos2unix mvnw && chmod +x mvnw && ./mvnw -B dependency:go-offline
-#builds an image and disposes the container
+# Copy maven files first for better caching
+COPY --chown=appgroup:appgroup mvnw .
+COPY --chown=appgroup:appgroup .mvn .mvn
+COPY --chown=appgroup:appgroup pom.xml .
 
-COPY src src
-RUN ./mvnw package -DskipTests
+# Fix line endings and download dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends dos2unix && \
+    dos2unix mvnw && \
+    chmod +x mvnw && \
+    ./mvnw dependency:go-offline && \
+    apt-get remove -y dos2unix && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p target/dependency && (cd target/dependency; jar -xf ../*.jar)
+# Copy source and build with layers
+COPY --chown=appgroup:appgroup src src
+RUN ./mvnw package -DskipTests && \
+    java -Djarmode=layertools -jar target/*.jar extract
 
-#-----------------------------------------#
+# Runtime stage
+FROM eclipse-temurin:11-jre-jammy as runtime
+WORKDIR /app
 
-FROM openjdk:11.0.13-jre-slim-buster as stage
+# Add non-root user
+RUN addgroup --system --gid 1001 appgroup && \
+    adduser --system --uid 1001 --group appgroup && \
+    mkdir -p /app/logs && \
+    chown -R appgroup:appgroup /app
 
-#argument
-ARG DEPENDENCY=/app/target/dependency
+# Copy layers in order of least to most likely to change
+COPY --from=builder --chown=appgroup:appgroup /app/dependencies/ ./
+COPY --from=builder --chown=appgroup:appgroup /app/spring-boot-loader/ ./
+COPY --from=builder --chown=appgroup:appgroup /app/snapshot-dependencies/ ./
+COPY --from=builder --chown=appgroup:appgroup /app/application/ ./
 
-# Copy the dependency application file from builder stage artifact
-COPY --from=builder ${DEPENDENCY}/BOOT-INF/lib /app/lib
-COPY --from=builder ${DEPENDENCY}/META-INF /app/META-INF
-COPY --from=builder ${DEPENDENCY}/BOOT-INF/classes /app
-
-# just for development purpose
-RUN apt update && apt install -y curl
+# Configure container
+USER appgroup
 EXPOSE 8081
 
-ENTRYPOINT ["java", "-cp", "app:app/lib/*", "com.classpathio.order.OrderMicroserviceApplication"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD curl -f http://localhost:8081/actuator/health || exit 1
+
+# JVM configuration for containers
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0 -XX:+UseContainerSupport"
+
+# Start application
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS org.springframework.boot.loader.JarLauncher"]
