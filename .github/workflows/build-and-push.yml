@@ -13,36 +13,34 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     steps:
-      # Step 1: Checkout code
       - name: Checkout code
         uses: actions/checkout@v2
-      # Step 2: Log in to Azure CLI with OpenID Connect (OIDC)
-      - name: Log in to Azure CLI
+
+      - name: Log in to Azure CLI with OIDC
         uses: azure/login@v1
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          enable-AzPSSession: true
-      # Step 3: Build Docker Image
+
       - name: Build Docker image
         run: |
           docker build -t order-microservice:latest .
 
-      # Step 4: Tag Docker Image with ACR URL
       - name: Tag Docker image
         run: |
           docker tag order-microservice:latest classpathio.azurecr.io/order-microservice:latest
-          
-      # Step 5: Login to ACR using Azure CLI
-      
+
+      - name: Verify Azure login
+        run: |
+          az account show
+
       - name: Log in to ACR using Azure CLI
         env:
-          ACR_NAME: "ordermicroservicesrepo"  # Use your ACR name
+          ACR_NAME: "ordermicroservicesrepo"
         run: |
-          az acr login --name $ACR_NAME          
+          az acr login --name $ACR_NAME
 
-      # Step 6: Push Docker Image to ACR
       - name: Push Docker image to ACR
         run: |
           docker push ordermicroservicesrepo.azurecr.io/order-microservice:latest
