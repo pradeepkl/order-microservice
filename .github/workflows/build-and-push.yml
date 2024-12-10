@@ -38,11 +38,11 @@ jobs:
       
       - name: Log in to ACR using Azure CLI
         env:
-          ACR_NAME: "classpathio"  # Use your ACR name
+          ACR_NAME: "ordermicroservicesrepo"  # Use your ACR name
         run: |
           az acr login --name $ACR_NAME          
 
       # Step 6: Push Docker Image to ACR
       - name: Push Docker image to ACR
         run: |
-          docker push classpathio.azurecr.io/order-microservice:latest
+          docker push ordermicroservicesrepo.azurecr.io/order-microservice:latest
