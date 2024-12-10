@@ -30,7 +30,6 @@ jobs:
       - name: Tag Docker image
         run: |
           docker tag order-microservice:latest ordermicroservicesrepo.azurecr.io/order-microservice:latest
-
       - name: Verify Azure login
         run: |
           az account show
