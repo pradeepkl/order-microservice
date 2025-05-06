@@ -1,4 +1,5 @@
 name: Build and Push to GCP
+# trigger to build the project
 on:
   push:
     branches: [ "master" ]
