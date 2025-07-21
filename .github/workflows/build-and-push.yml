@@ -29,17 +29,17 @@ jobs:
 
       - name: Tag Docker image
         run: |
-          docker tag order-microservice:latest ordersmicroservicerepo.azurecr.io/order-microservice:latest
+          docker tag order-microservice:latest ordermicroservicerepo.azurecr.io/order-microservice:latest
       - name: Verify Azure login
         run: |
           az account show
 
       - name: Log in to ACR using Azure CLI
         env:
-          ACR_NAME: "ordersmicroservicerepo"
+          ACR_NAME: "ordermicroservicerepo"
         run: |
           az acr login --name $ACR_NAME
 
       - name: Push Docker image to ACR
         run: |
-          docker push ordersmicroservicerepo.azurecr.io/order-microservice:latest
+          docker push ordermicroservicerepo.azurecr.io/order-microservice:latest
