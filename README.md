@@ -4,6 +4,7 @@ This guide provides detailed instructions for configuring GitHub Actions to secu
 
 ## Table of Contents
 
+
 1. [Introduction](#introduction)
 2. [Prerequisites](#prerequisites)
 3. [Google Cloud Configuration Steps](#google-cloud-configuration-steps)
