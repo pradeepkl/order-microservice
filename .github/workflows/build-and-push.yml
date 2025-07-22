@@ -3,7 +3,7 @@ name: Build and Push Docker Image to ACR
 on:
   push:
     branches:
-      - master
+      - anudeep
 
 permissions:
   id-token: write
@@ -19,7 +19,7 @@ jobs:
       - name: Log in to Azure CLI with OIDC
         uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID_ANUDEEP }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
@@ -29,17 +29,17 @@ jobs:
 
       - name: Tag Docker image
         run: |
-          docker tag order-microservice:latest ordermicroservicerepo.azurecr.io/order-microservice:latest
+          docker tag order-microservice:latest anudeepordermicroservicerepo.azurecr.io/order-microservice:latest
       - name: Verify Azure login
         run: |
           az account show
 
       - name: Log in to ACR using Azure CLI
         env:
-          ACR_NAME: "ordermicroservicerepo"
+          ACR_NAME: "anudeepordermicroservicerepo"
         run: |
           az acr login --name $ACR_NAME
 
       - name: Push Docker image to ACR
         run: |
-          docker push ordermicroservicerepo.azurecr.io/order-microservice:latest
+          docker push anudeepordermicroservicerepo.azurecr.io/order-microservice:latest
