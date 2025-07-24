@@ -29,7 +29,7 @@ jobs:
 
       - name: Tag Docker image
         run: |
-          docker tag order-microservice:latest ordermicroservicerepo.azurecr.io/order-microservice:2.0.0
+          docker tag order-microservice:latest ordermicroservicerepo.azurecr.io/order-microservice:3.0.0
       - name: Verify Azure login
         run: |
           az account show
@@ -42,4 +42,4 @@ jobs:
 
       - name: Push Docker image to ACR
         run: |
-          docker push ordermicroservicerepo.azurecr.io/order-microservice:2.0.0
+          docker push ordermicroservicerepo.azurecr.io/order-microservice:3.0.0
