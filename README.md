@@ -2,9 +2,7 @@
 
 This guide provides detailed instructions for configuring GitHub Actions to securely push Docker images to Google Cloud Platform's Artifact Registry using Workload Identity Federation.
 
-
 ## Table of Contents
-
 
 1. [Introduction](#introduction)
 2. [Prerequisites](#prerequisites)
